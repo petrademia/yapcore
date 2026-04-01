@@ -1468,13 +1468,6 @@ namespace ygopro
     }
     card.race = query.getColumn("race");
     card.attribute = query.getColumn("attribute");
-    if (code == 35269905 || code == 73819701 || code == 68468459)
-    {
-      std::fprintf(stderr,
-                   "[ygoenv-carddata] db code=%u alias=%u type=%u level=%u race=%u attr=%u sizeof=%zu\n",
-                   card.code, card.alias, card.type, card.level, card.race,
-                   card.attribute, sizeof(card_data));
-    }
     return card;
   }
 
@@ -1650,13 +1643,6 @@ namespace ygopro
       throw std::runtime_error("[card_reader_callback] Card not found: " + std::to_string(code));
     }
     *card = it->second;
-    if (code == 35269905 || code == 73819701 || code == 68468459)
-    {
-      std::fprintf(stderr,
-                   "[ygoenv-carddata] cb code=%u alias=%u type=%u level=%u race=%u attr=%u sizeof=%zu\n",
-                   card->code, card->alias, card->type, card->level, card->race,
-                   card->attribute, sizeof(card_data));
-    }
     return 0;
   }
 
@@ -5315,14 +5301,6 @@ namespace ygopro
             LegalAction la = LegalAction::from_spec(spec);
             la.cid_ = c_get_card_id(code);
             legal_actions_.push_back(la);
-            if (const char *dbg = std::getenv("YGOENV_DEBUG_SELECT_UNSELECT"))
-            {
-              (void)dbg;
-              fmt::println(
-                  stderr,
-                  "[debug][MSG_SELECT_UNSELECT_CARD] i={} code={} controller={} player={} loc={} seq={} pos={} spec={}",
-                  i, code, controller, player, loc, seq, pos, spec);
-            }
           }
         }
 
