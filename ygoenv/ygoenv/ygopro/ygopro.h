@@ -2036,6 +2036,7 @@ namespace ygopro
     int turn_count_;
 
     int msg_;
+    int last_msg_ = 0;
     std::vector<LegalAction> legal_actions_;
     PlayerId to_play_;
     std::function<void(int)> callback_;
@@ -3754,6 +3755,26 @@ namespace ygopro
 
     uint8_t read_u8() { return data_[dp_++]; }
 
+    void debug_retry_window(const char *where)
+    {
+      if (std::getenv("YAPCORE_DEBUG_ADAPTER_RETRY") == nullptr)
+      {
+        return;
+      }
+      int msg_pos = std::max(0, dp_ - 1);
+      int start = std::max(0, msg_pos - 8);
+      int end = std::min(dl_, msg_pos + 9);
+      std::fprintf(stderr,
+                   "[adapter-retry] where=%s msg=%d(%s) last_msg=%d(%s) dp=%d dl=%d window=[",
+                   where, msg_, msg_to_string(msg_).c_str(),
+                   last_msg_, msg_to_string(last_msg_).c_str(), dp_, dl_);
+      for (int i = start; i < end; ++i)
+      {
+        std::fprintf(stderr, "%s%02x", (i == start ? "" : " "), (unsigned int)data_[i]);
+      }
+      std::fprintf(stderr, "]\n");
+    }
+
     uint16_t read_u16()
     {
       uint16_t v = *reinterpret_cast<uint16_t *>(data_ + dp_);
@@ -4042,6 +4063,7 @@ namespace ygopro
     // 3. update to_play_ and options_ if need action
     void handle_message()
     {
+      last_msg_ = msg_;
       msg_ = int(data_[dp_++]);
       legal_actions_ = {};
 
@@ -4597,6 +4619,7 @@ namespace ygopro
       else if (msg_ == MSG_CONFIRM_CARDS)
       {
         auto player = read_u8();
+        auto skip_panel = read_u8();
         auto size = read_u8();
         std::vector<Card> cards;
         for (int i = 0; i < size; ++i)
@@ -4620,6 +4643,10 @@ namespace ygopro
         auto &op = players_[1 - player];
 
         op->notify(fmt::format("{} shows you {} cards.", pl->nickname_, size));
+        if (verbose_ && skip_panel)
+        {
+          pl->notify("Card confirmation panel was skipped.");
+        }
         for (int i = 0; i < size; ++i)
         {
           pl->notify(fmt::format("{}: {}", i + 1, cards[i].name_));
@@ -5141,6 +5168,7 @@ namespace ygopro
       }
       else if (msg_ == MSG_RETRY)
       {
+        debug_retry_window("handle_message");
         throw std::runtime_error("Retry");
       }
       else if (msg_ == MSG_SELECT_BATTLECMD)
