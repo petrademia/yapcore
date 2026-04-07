@@ -1257,6 +1257,103 @@ namespace ygopro
     }
   };
 
+  struct ConfirmCardEntry
+  {
+    CardCode code = 0;
+    PlayerId controller = 0;
+    uint8_t location = 0;
+    uint8_t sequence = 0;
+  };
+
+  struct ConfirmCardsPrompt
+  {
+    PlayerId player = 0;
+    bool skip_panel = false;
+    std::vector<ConfirmCardEntry> cards;
+  };
+
+  struct SelectUnselectCardEntry
+  {
+    CardCode code = 0;
+    PlayerId controller = 0;
+    uint8_t location = 0;
+    uint8_t sequence = 0;
+    uint8_t position = 0;
+  };
+
+  struct SelectUnselectCardPrompt
+  {
+    PlayerId player = 0;
+    bool finishable = false;
+    bool cancelable = false;
+    uint8_t min = 0;
+    uint8_t max = 0;
+    std::vector<SelectUnselectCardEntry> selectable;
+    uint8_t unselect_size = 0;
+  };
+
+  struct SelectChainEntry
+  {
+    uint8_t flag = 0;
+    bool forced = false;
+    CardCode code = 0;
+    PlayerId controller = 0;
+    uint8_t location = 0;
+    uint8_t sequence = 0;
+    uint8_t position = 0;
+    uint32_t desc = 0;
+  };
+
+  struct SelectChainPrompt
+  {
+    PlayerId player = 0;
+    uint8_t spe_count = 0;
+    uint32_t hint_timing = 0;
+    uint32_t other_timing = 0;
+    std::vector<SelectChainEntry> chains;
+
+    bool forced() const
+    {
+      for (const auto &chain : chains)
+      {
+        if (chain.forced)
+        {
+          return true;
+        }
+      }
+      return false;
+    }
+  };
+
+  struct SelectCardEntry
+  {
+    CardCode code = 0;
+    PlayerId controller = 0;
+    uint8_t location = 0;
+    uint8_t sequence = 0;
+    uint8_t position = 0;
+  };
+
+  struct SelectCardPrompt
+  {
+    PlayerId player = 0;
+    bool cancelable = false;
+    uint8_t min = 0;
+    uint8_t max = 0;
+    std::vector<SelectCardEntry> cards;
+  };
+
+  struct SelectOptionEntry
+  {
+    uint32_t desc = 0;
+  };
+
+  struct SelectOptionPrompt
+  {
+    PlayerId player = 0;
+    std::vector<SelectOptionEntry> options;
+  };
+
   class SpecInfo
   {
   public:
@@ -4023,6 +4120,111 @@ namespace ygopro
       return card_specs;
     }
 
+    ConfirmCardsPrompt read_confirm_cards_prompt()
+    {
+      ConfirmCardsPrompt prompt;
+      prompt.player = read_u8();
+      prompt.skip_panel = read_u8() != 0;
+      auto size = read_u8();
+      prompt.cards.reserve(size);
+      for (int i = 0; i < size; ++i)
+      {
+        ConfirmCardEntry entry;
+        entry.code = read_u32();
+        entry.controller = read_u8();
+        entry.location = read_u8();
+        entry.sequence = read_u8();
+        prompt.cards.push_back(entry);
+      }
+      return prompt;
+    }
+
+    SelectUnselectCardPrompt read_select_unselect_card_prompt()
+    {
+      SelectUnselectCardPrompt prompt;
+      prompt.player = read_u8();
+      prompt.finishable = read_u8() != 0;
+      prompt.cancelable = read_u8() != 0;
+      prompt.min = read_u8();
+      prompt.max = read_u8();
+      auto select_size = read_u8();
+      prompt.selectable.reserve(select_size);
+      for (int i = 0; i < select_size; ++i)
+      {
+        SelectUnselectCardEntry entry;
+        entry.code = read_u32();
+        entry.controller = read_u8();
+        entry.location = read_u8();
+        entry.sequence = read_u8();
+        entry.position = read_u8();
+        prompt.selectable.push_back(entry);
+      }
+      prompt.unselect_size = read_u8();
+      return prompt;
+    }
+
+    SelectChainPrompt read_select_chain_prompt()
+    {
+      SelectChainPrompt prompt;
+      prompt.player = read_u8();
+      auto size = read_u8();
+      prompt.spe_count = read_u8();
+      prompt.hint_timing = read_u32();
+      prompt.other_timing = read_u32();
+      prompt.chains.reserve(size);
+      for (int i = 0; i < size; ++i)
+      {
+        SelectChainEntry entry;
+        entry.flag = read_u8();
+        entry.forced = read_u8() != 0;
+        entry.code = read_u32();
+        entry.controller = read_u8();
+        entry.location = read_u8();
+        entry.sequence = read_u8();
+        entry.position = read_u8();
+        entry.desc = read_u32();
+        prompt.chains.push_back(entry);
+      }
+      return prompt;
+    }
+
+    SelectCardPrompt read_select_card_prompt()
+    {
+      SelectCardPrompt prompt;
+      prompt.player = read_u8();
+      prompt.cancelable = read_u8() != 0;
+      prompt.min = read_u8();
+      prompt.max = read_u8();
+      auto size = read_u8();
+      prompt.cards.reserve(size);
+      for (int i = 0; i < size; ++i)
+      {
+        SelectCardEntry entry;
+        entry.code = read_u32();
+        entry.controller = read_u8();
+        entry.location = read_u8();
+        entry.sequence = read_u8();
+        entry.position = read_u8();
+        prompt.cards.push_back(entry);
+      }
+      return prompt;
+    }
+
+    SelectOptionPrompt read_select_option_prompt()
+    {
+      SelectOptionPrompt prompt;
+      prompt.player = read_u8();
+      auto size = read_u8();
+      prompt.options.reserve(size);
+      for (int i = 0; i < size; ++i)
+      {
+        SelectOptionEntry entry;
+        entry.desc = read_u32();
+        prompt.options.push_back(entry);
+      }
+      return prompt;
+    }
+
     std::tuple<CardCode, int> unpack_desc(CardCode code, uint32_t desc)
     {
       if (desc < DESCRIPTION_LIMIT)
@@ -4618,36 +4820,30 @@ namespace ygopro
       }
       else if (msg_ == MSG_CONFIRM_CARDS)
       {
-        auto player = read_u8();
-        auto skip_panel = read_u8();
-        auto size = read_u8();
+        auto prompt = read_confirm_cards_prompt();
         std::vector<Card> cards;
-        for (int i = 0; i < size; ++i)
+        for (const auto &entry : prompt.cards)
         {
-          read_u32();
-          auto c = read_u8();
-          auto loc = read_u8();
-          auto seq = read_u8();
           if (verbose_)
           {
-            cards.push_back(get_card(c, loc, seq));
+            cards.push_back(get_card(entry.controller, entry.location, entry.sequence));
           }
-          revealed_.insert(ls_to_spec(loc, seq, 0, c == player));
+          revealed_.insert(ls_to_spec(entry.location, entry.sequence, 0, entry.controller == prompt.player));
         }
         if (!verbose_)
         {
           return;
         }
 
-        auto &pl = players_[player];
-        auto &op = players_[1 - player];
+        auto &pl = players_[prompt.player];
+        auto &op = players_[1 - prompt.player];
 
-        op->notify(fmt::format("{} shows you {} cards.", pl->nickname_, size));
-        if (verbose_ && skip_panel)
+        op->notify(fmt::format("{} shows you {} cards.", pl->nickname_, prompt.cards.size()));
+        if (verbose_ && prompt.skip_panel)
         {
           pl->notify("Card confirmation panel was skipped.");
         }
-        for (int i = 0; i < size; ++i)
+        for (size_t i = 0; i < cards.size(); ++i)
         {
           pl->notify(fmt::format("{}: {}", i + 1, cards[i].name_));
         }
@@ -5289,62 +5485,49 @@ namespace ygopro
       else if (msg_ == MSG_SELECT_UNSELECT_CARD)
       {
         // TODO: add feature of selected cards (also for multi select)
-        auto player = read_u8();
-        bool finishable = read_u8();
-        bool cancelable = read_u8();
-        auto min = read_u8();
-        auto max = read_u8();
-        auto select_size = read_u8();
-
+        auto prompt = read_select_unselect_card_prompt();
         std::vector<std::string> select_specs;
-        select_specs.reserve(select_size);
+        select_specs.reserve(prompt.selectable.size());
         if (verbose_)
         {
-          auto &pl = players_[player];
-          pl->notify("Select " + std::to_string(min) + " to " +
-                     std::to_string(max) + " cards:");
-          for (int i = 0; i < select_size; ++i)
+          auto &pl = players_[prompt.player];
+          pl->notify("Select " + std::to_string(prompt.min) + " to " +
+                     std::to_string(prompt.max) + " cards:");
+          for (size_t i = 0; i < prompt.selectable.size(); ++i)
           {
-            auto code = read_u32();
-            auto loc = read_u32();
-            Card card = c_get_card(code);
-            card.set_location(loc);
-            auto spec = card.get_spec(player);
+            const auto &entry = prompt.selectable[i];
+            auto spec = ls_to_spec(entry.location, entry.sequence, entry.position,
+                                   entry.controller != prompt.player);
             select_specs.push_back(spec);
+            auto card = c_get_card(entry.code);
             auto s = fmt::format("{}: {}({})", i + 1, card.name_, spec);
             pl->notify(s);
           }
         }
         else
         {
-          for (int i = 0; i < select_size; ++i)
+          for (const auto &entry : prompt.selectable)
           {
-            auto code = read_u32();
-            auto controller = read_u8();
-            auto loc = read_u8();
-            auto seq = read_u8();
-            auto pos = read_u8();
-            auto spec = ls_to_spec(loc, seq, pos, controller != player);
+            auto spec = ls_to_spec(entry.location, entry.sequence, entry.position,
+                                   entry.controller != prompt.player);
             select_specs.push_back(spec);
             LegalAction la = LegalAction::from_spec(spec);
-            la.cid_ = c_get_card_id(code);
+            la.cid_ = c_get_card_id(entry.code);
             legal_actions_.push_back(la);
           }
         }
 
-        auto unselect_size = read_u8();
-
         // unselect not allowed (no regrets)
-        dp_ += 8 * unselect_size;
+        dp_ += 8 * prompt.unselect_size;
 
-        if (finishable)
+        if (prompt.finishable)
         {
           legal_actions_.push_back(LegalAction::finish());
         }
 
         // cancelable and finishable not needed
 
-        to_play_ = player;
+        to_play_ = prompt.player;
         callback_ = [this](int idx)
         {
           if (legal_actions_[idx].finish_)
@@ -5361,13 +5544,9 @@ namespace ygopro
       }
       else if (msg_ == MSG_SELECT_CARD)
       {
-        auto player = read_u8();
-        bool cancelable = read_u8();
-        auto min = read_u8();
-        auto max = read_u8();
-        auto size = read_u8();
+        auto prompt = read_select_card_prompt();
 
-        if (min == 0)
+        if (prompt.min == 0)
         {
           throw std::runtime_error("Min == 0 not implemented for select card");
         }
@@ -5375,27 +5554,25 @@ namespace ygopro
         // We will build the full LegalAction list first
         std::vector<LegalAction> actions;
         std::vector<std::string> specs_for_ms; // Still need this for init_multi_select
-        actions.reserve(size);
-        specs_for_ms.reserve(size);
+        actions.reserve(prompt.cards.size());
+        specs_for_ms.reserve(prompt.cards.size());
 
         if (verbose_)
         {
-          auto &pl = players_[player];
-          pl->notify("Select " + std::to_string(min) + " to " +
-                     std::to_string(max) + " cards separated by spaces:");
+          auto &pl = players_[prompt.player];
+          pl->notify("Select " + std::to_string(prompt.min) + " to " +
+                     std::to_string(prompt.max) + " cards separated by spaces:");
 
-          for (int i = 0; i < size; ++i)
+          for (size_t i = 0; i < prompt.cards.size(); ++i)
           {
-            auto code = read_u32();
-            auto loc = read_u32();
-            Card card = c_get_card(code);
-            card.set_location(loc);
-
-            auto spec = card.get_spec(player);
+            const auto &entry = prompt.cards[i];
+            auto spec = ls_to_spec(entry.location, entry.sequence, entry.position,
+                                   entry.controller != prompt.player);
             specs_for_ms.push_back(spec);
 
             std::string s; // Create the verbose string
-            if (card.controler_ != player && card.position_ & POS_FACEDOWN)
+            auto card = get_card(entry.controller, entry.location, entry.sequence);
+            if (entry.controller != prompt.player && (entry.position & POS_FACEDOWN))
             {
               s = fmt::format("{}: {} card ({})", i + 1, card.get_position(), spec);
             }
@@ -5407,25 +5584,20 @@ namespace ygopro
 
             LegalAction la = LegalAction::from_spec(spec);
             la.verbose_str_ = s; // <-- STORE THE STRING
-            la.cid_ = c_get_card_id(card.code_);
+            la.cid_ = c_get_card_id(entry.code);
             actions.push_back(la);
           }
         }
         else
         {
-          for (int i = 0; i < size; ++i)
+          for (const auto &entry : prompt.cards)
           {
-            auto code = read_u32();
-            // loc is a u32, read as 4 bytes
-            auto controller = read_u8();
-            auto loc = read_u8();
-            auto seq = read_u8();
-            auto pos = read_u8();
-            auto spec = ls_to_spec(loc, seq, pos, controller != player);
+            auto spec = ls_to_spec(entry.location, entry.sequence, entry.position,
+                                   entry.controller != prompt.player);
             specs_for_ms.push_back(spec);
 
             LegalAction la = LegalAction::from_spec(spec);
-            la.cid_ = c_get_card_id(code);
+            la.cid_ = c_get_card_id(entry.code);
             actions.push_back(la);
           }
         }
@@ -5436,11 +5608,11 @@ namespace ygopro
           if (current_phase_ == PHASE_END)
           {
             // random discard
-            std::vector<int> comb(size);
+            std::vector<int> comb(prompt.cards.size());
             std::iota(comb.begin(), comb.end(), 0);
             std::shuffle(comb.begin(), comb.end(), gen_);
-            resp_buf_[0] = min;
-            for (int i = 0; i < min; ++i)
+            resp_buf_[0] = prompt.min;
+            for (int i = 0; i < prompt.min; ++i)
             {
               resp_buf_[i + 1] = comb[i];
             }
@@ -5452,8 +5624,8 @@ namespace ygopro
         // Set up the multi-select state
         ms_idx_ = 0;
         ms_mode_ = 0;
-        ms_min_ = min;
-        ms_max_ = max;
+        ms_min_ = prompt.min;
+        ms_max_ = prompt.max;
         ms_must_ = 0;
         ms_specs_ = specs_for_ms;
         ms_r_idxs_.clear();
@@ -5478,7 +5650,7 @@ namespace ygopro
             legal_actions_.push_back(LegalAction::finish());
             if (verbose_)
             {
-              players_[player]->notify(fmt::format("{}: Finish Selection", legal_actions_.size()));
+              players_[prompt.player]->notify(fmt::format("{}: Finish Selection", legal_actions_.size()));
             }
           }
         }
@@ -5487,13 +5659,13 @@ namespace ygopro
           legal_actions_.push_back(LegalAction::finish());
           if (verbose_)
           {
-            players_[player]->notify(fmt::format("{}: Finish Selection", legal_actions_.size()));
+            players_[prompt.player]->notify(fmt::format("{}: Finish Selection", legal_actions_.size()));
           }
         }
         // If ms_idx_ (0) < ms_min_ (1), no finish action is added, which is correct.
         // =================================================================
 
-        to_play_ = player;
+        to_play_ = prompt.player;
         callback_ = [this](int idx)
         {
           _callback_multi_select(idx, ms_max_ == 1);
@@ -5746,37 +5918,10 @@ namespace ygopro
       }
       else if (msg_ == MSG_SELECT_CHAIN)
       {
-        auto player = read_u8();
-        auto size = read_u8();
-        auto spe_count = read_u8();
-        bool forced = false;
-        auto hint_timing = read_u32();
-        auto other_timing = read_u32();
-        (void)hint_timing;
-        (void)other_timing;
+        auto prompt = read_select_chain_prompt();
+        bool forced = prompt.forced();
 
-        std::vector<CardCode> codes;
-        std::vector<uint32_t> descs;
-        std::vector<std::string> specs;
-        std::vector<uint8_t> flags;
-        for (int i = 0; i < size; ++i)
-        {
-          auto flag = read_u8();
-          auto is_forced = read_u8();
-          flags.push_back(flag);
-          forced = forced || (is_forced != 0);
-          CardCode code = read_u32();
-          codes.push_back(code);
-          PlayerId c = read_u8();
-          uint8_t loc = read_u8();
-          uint8_t seq = read_u8();
-          uint8_t pos = read_u8();
-          specs.push_back(ls_to_spec(loc, seq, pos, c != player));
-          uint32_t desc = read_u32();
-          descs.push_back(desc);
-        }
-
-        if ((size == 0) && (spe_count == 0))
+        if (prompt.chains.empty() && prompt.spe_count == 0)
         {
           // non-GUI don't need this
           // if (verbose_) {
@@ -5787,9 +5932,9 @@ namespace ygopro
           return;
         }
 
-        auto &pl = players_[player];
-        auto &op = players_[1 - player];
-        chaining_player_ = player;
+        auto &pl = players_[prompt.player];
+        auto &op = players_[1 - prompt.player];
+        chaining_player_ = prompt.player;
         if (!op->seen_waiting_)
         {
           if (verbose_)
@@ -5804,12 +5949,14 @@ namespace ygopro
           pl->notify("Select chain:");
         }
 
-        for (int i = 0; i < size; i++)
+        for (size_t i = 0; i < prompt.chains.size(); i++)
         {
-          CardCode code = codes[i];
-          uint32_t desc = descs[i];
-          auto spec = specs[i];
-          auto flag = flags[i];
+          const auto &entry = prompt.chains[i];
+          CardCode code = entry.code;
+          uint32_t desc = entry.desc;
+          auto spec = ls_to_spec(entry.location, entry.sequence, entry.position,
+                                 entry.controller != prompt.player);
+          auto flag = entry.flag;
           auto [code_d, eff_idx] = unpack_desc(code, desc);
           if (desc == 0)
           {
@@ -5837,10 +5984,10 @@ namespace ygopro
           legal_actions_.push_back(LegalAction::cancel());
           if (verbose_)
           {
-            pl->notify(fmt::format("{}: cancel", size + 1));
+            pl->notify(fmt::format("{}: cancel", prompt.chains.size() + 1));
           }
         }
-        to_play_ = player;
+        to_play_ = prompt.player;
         callback_ = [this, forced](int idx)
         {
           const auto &action = legal_actions_[idx];
@@ -5974,15 +6121,14 @@ namespace ygopro
       }
       else if (msg_ == MSG_SELECT_OPTION)
       {
-        auto player = read_u8();
-        auto size = read_u8();
+        auto prompt = read_select_option_prompt();
         if (verbose_)
         {
-          players_[player]->notify("Select an option:");
+          players_[prompt.player]->notify("Select an option:");
         }
-        for (int i = 0; i < size; ++i)
+        for (size_t i = 0; i < prompt.options.size(); ++i)
         {
-          auto desc = read_u32();
+          auto desc = prompt.options[i].desc;
           auto [code, eff_idx] = unpack_desc(0, desc);
           if (desc == 0)
           {
@@ -5996,11 +6142,11 @@ namespace ygopro
           if (verbose_)
           {
             std::string s = describe_effect_label(code, eff_idx);
-            players_[player]->notify(std::to_string(i + 1) + ": " + s);
+            players_[prompt.player]->notify(std::to_string(i + 1) + ": " + s);
           }
         }
 
-        to_play_ = player;
+        to_play_ = prompt.player;
         callback_ = [this](int idx)
         {
           YGO_SetResponsei(pduel_, idx);
