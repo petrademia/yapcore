@@ -1,6 +1,6 @@
 # ===== Config =====
 SCRIPTS_REPO   := https://github.com/mycard/ygopro-scripts.git
-SCRIPTS_REF    := 806b57a8e9b5aee52fb46520c7e6a37a6946b16f
+SCRIPTS_REF    := 9ef3ff922ed14c77e7be4fb2be13259f0a9d0de6
 SCRIPTS_DIR    := third_party/ygopro-scripts
 # keep inside repo
 
