@@ -61,7 +61,9 @@ scripts/update:
 scripts/link:
 	@mkdir -p scripts
 	ln -sfn "../$(SCRIPTS_DIR)" scripts/script
+	ln -sfn "scripts/script" script
 	@echo "Linked scripts -> scripts/script"
+	@echo "Linked script -> scripts/script"
 
 # ===== Assets (card DB + strings) =====
 assets: $(LOCALES)
@@ -86,5 +88,6 @@ assets/locale/zh/strings.conf: assets/locale/zh
 # ===== Cleanup =====
 clean:
 	rm -rf scripts/script
+	rm -rf script
 	rm -rf $(SCRIPTS_DIR)
 	rm -rf assets/locale/en assets/locale/zh
