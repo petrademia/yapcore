@@ -44,7 +44,7 @@ scripts: scripts/update scripts/link
 
 # Clone/update to the pinned commit
 scripts/update:
-	@if git -C "$(SCRIPTS_DIR)" rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
+	@if [ -d "$(SCRIPTS_DIR)/.git" ] || [ -f "$(SCRIPTS_DIR)/.git" ]; then \
 		echo "Updating scripts repository to pinned commit $(SCRIPTS_REF)..."; \
 		git -C "$(SCRIPTS_DIR)" fetch origin --tags --prune; \
 		git -C "$(SCRIPTS_DIR)" checkout -q "$(SCRIPTS_REF)"; \
