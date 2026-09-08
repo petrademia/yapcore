@@ -1,7 +1,11 @@
 # YGOEnv: A Reinforcement Learning Environment for Yu-Gi-Oh!
 
+> **Archived / superseded:** YapCore is no longer an active execution backend. The current project architecture uses [MAPPING](https://github.com/petrademia/mapping) for deck semantics and experiment configuration, [RAPPING](https://github.com/petrademia/rapping) for YGOPro replay ingestion and factual trajectory extraction, and [YAPPING](https://github.com/petrademia/yapping) for legal execution, bounded search, counterfactual analysis, learning, and verification. This repository remains available as historical reference for its vectorized environment and feature representation. It is not maintained and should not be treated as behaviorally equivalent to YAPPING.
+>
+> No compatibility or conformance with current YAPPING engine pins is guaranteed. Do not treat YapCore and YAPPING transitions or actions as interchangeable. Future high-throughput work should be driven by measured YAPPING bottlenecks rather than automatically reviving this backend.
+
 This repository provides a self-contained Gymnasium-compatible environment for simulating Yu-Gi-Oh! duels using the YGOPro engine.
-It is a minimal, maintained fork of the original `ygo-agent` project, stripped down to focus on the environment and engine interface, with some minor differences.
+It was a minimal, maintained fork of the original `ygo-agent` project, stripped down to focus on the environment and engine interface, with some minor differences.
 
 ---
 
